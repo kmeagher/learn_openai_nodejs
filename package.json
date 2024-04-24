@@ -1,0 +1,28 @@
+{
+  "name": "learn_openai_nodejs",
+  "version": "0.0.1",
+  "description": "Learning OpenAI API with Node.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kmeagher/learn_openai_nodejs.git"
+  },
+  "keywords": [
+    "OpenAI",
+    "ML",
+    "LLM",
+    "AI"
+  ],
+  "author": "K.Meagher",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kmeagher/learn_openai_nodejs/issues"
+  },
+  "homepage": "https://github.com/kmeagher/learn_openai_nodejs#readme",
+  "dependencies": {
+    "openai": "^4.38.3"
+  }
+}
