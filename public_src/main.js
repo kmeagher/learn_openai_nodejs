@@ -1,16 +1,43 @@
 
+function saveUser() {
+    localStorage["usr"] = JSON.stringify(user);
+}
 
-/**
- * Things TODO
- * - Save User to Localhost to enable re-use of token
- * - Figure out re-try or just handle exceptions/errors/socket close gracefully
- */
+function saveStatus() {
+    localStorage["lastStatus"] = statusCode;
+}
+
+function loadUser() {
+    if (statusCode!==200) {
+        return {};
+    }
+    const str = localStorage['usr'];
+    if (typeof str === 'string' && str.trim().length>0) {
+        try {
+            return JSON.parse(str);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+    return {};
+}
+
+function loadStatus() {
+    const str = localStorage["lastStatus"];
+    if (isNaN(str)) {
+        return 200;
+    }
+    return parseInt(str);
+}
 
 const host = "localhost:8080";
             
 let socket = null;
 
-let user = {};
+let statusCode = loadStatus();
+
+let user = loadUser();
+saveUser();
 
 function startChat() {
     connect();
@@ -81,7 +108,6 @@ async function connect() {
         message: "No Connection Available"
     };
     if (activeUser()) {
-        console.log("active user");
         connectSocket();
         return;
     } else {
@@ -89,20 +115,19 @@ async function connect() {
     }
     if (authResponse && authResponse.errored) {
         console.log("Error attempting to connect");
-        // TODO: try to connect again
     } else if (authResponse.data && authResponse.data.length>0) {
         user = authResponse.data[0];
-        console.log("--- user auth created ---");
+        saveUser();
+        statusCode = 200;
+        saveStatus();
         connectSocket();
     } else {
         console.log("Authorization Response Error");
         addResponse(JSON.stringify(authResponse, null, 2));
-        // TODO: try to connect again
     }
 }
 
 function connectSocket() {
-    console.log("connect socket");
     if (activeUser()) {
         document.getElementById('welcome').classList.add('hidden');
         document.getElementById('chatWindow').classList.add('hidden');
@@ -110,11 +135,10 @@ function connectSocket() {
         setTimeout(() => {
             socket = new WebSocket(`ws://${host}/ws/connect/${user.token}`);
             socket.onopen = () => {
-                console.log("Connection Open");
                 document.getElementById('responses').innerHTML = '';
                 addResponse('Connection Open!');
-                addResponse("Hello! Let's get started!", true)
-                addResponse("Ask A Math question in the area below!", true);
+                addResponse("Hello! Let's get started!", true);
+                addResponse("Ask a math question in the area below!", true);
                 document.getElementById('welcome').classList.add('hidden');
                 document.getElementById('chatWindow').classList.remove('hidden');
                 document.getElementById('btnSend').removeEventListener('click', sendMessage);
@@ -125,6 +149,17 @@ function connectSocket() {
             }
             socket.onmessage = (message) => {
                 if (message.data) {
+                    if (message.data.includes && message.data.includes('"errored":true')) {
+                        let data = {};
+                        try { data = JSON.parse(message.data); } catch(e) { data = {
+                            errored: true,
+                            message: "Unexpected Error"
+                        }; }
+                        statusCode = data.statusCode || 400;
+                        saveStatus();
+                        disconnected(data);
+                        return;
+                    } 
                     addResponse(message.data);
                 } else {
                     console.log(message, " => message no data");
@@ -144,17 +179,32 @@ function connectSocket() {
         }, 2000);
     } else {
         console.log("Authorization Error");
-        // TODO: try to connect again
     }
 }
 
 function sendMessage() {
-    const message = document.getElementById('txtPrompt').value;
-    if (message.trim().length>0) {
-        addResponse("<br /><br />You > " + message + "<br /><br />")
-        socket.send(message);
-        document.getElementById('txtPrompt').value = '';
+    if (socket && socket.readyState === socket.OPEN) {
+        const message = document.getElementById('txtPrompt').value;
+        if (message.trim().length>0) {
+            addResponse("<br /><br />You > " + message + "<br />");
+            socket.send(message);
+            document.getElementById('txtPrompt').value = '';
+        }
+    } else {
+        disconnected({message: "The connection was closed"}, false);
     }
+}
+
+function disconnected(data, sessionExpired = true) {
+    data = data || {};
+    document.getElementById('responses').innerHTML = "Cannot Connect.<br />message > " 
+        + (data.message || 'Unexpected Result.');
+    if (sessionExpired) {
+        user = {};
+        saveUser();
+        addResponse("Your session may have expired. Please reload and try again.", true);
+    }
+    document.getElementById('promptArea').classList.add('hidden');
 }
 
 function newChat() {

@@ -7,13 +7,9 @@ const router = express.Router();
 const port = 8080;
 const auth = require('./auth');
 const mathTutor = require('./gpt-3.5-turbo/math-tutor');
+const jobs = require('./jobs');
 
-/**
- * Things to do:
- * - Use Database for SQL Connections
- * - Limit non-Super-User to 1 chat per day (for now) (IP Address-based?)
- */
-
+app.set('trust proxy', true); // allows for getting IP Address, even across a proxy req.ip
 app.use(cors());
 app.use(express.static(__dirname + '/public'));
 
@@ -48,23 +44,14 @@ router.ws('/connect/:token?', async (ws, req) => {
 
 app.use('/ws', router);
 
-
-
 app.get('/', (req, res) => {
-    // res.json({errored: false, message: "Hello World"});
-    console.log("send HTML: " + req.url);
-    res.sendFile('math_tutor.html', {
+    res.sendFile('math_tutor_min.html', {
         root: __dirname + '/public'
     });
 });
 
 app.get('*', (req, res, next) => {
-    console.log("send something else: " + req.url);
-    // if (req.url && req.url.includes('.js')) {
-        res.send("Requested File: " + req.url);
-        // return;
-    // }
-    // next();
+    res.send("Requested File: " + req.url);
 });
 
 app.post('/auth/create', (req, res) => {
@@ -83,3 +70,5 @@ app.post('/auth/validate', (req, res) => {
 app.listen(port, () => {
     console.log(`App listening on port ${port}`);
 });
+
+jobs.start();

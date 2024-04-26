@@ -6,13 +6,19 @@
 const OpenAI = require('openai');
 const client = new OpenAI();
 
-async function createAssistant() {
-    const assistant = await client.beta.assistants.create({
-        name: "Math Tutor",
-        instructions: "You are a math tutor. Write and run code to answer math questions.",
-        model: "gpt-3.5-turbo"
-    });
-    return assistant;
+async function createAssistant(name, instructions, options) {
+    options = options || {};
+    if (typeof name === 'string' && name.trim().length>0
+        && typeof instructions === 'string' && instructions.trim().length>0) {
+            console.log("--- create assistant ---");
+            const assistant = await client.beta.assistants.create({
+                name: name,
+                instructions: instructions,
+                model: "gpt-3.5-turbo"
+            });
+            return assistant;
+    }
+    return null;
 }
 
 exports.createAssistant = createAssistant;
